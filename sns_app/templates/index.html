@@ -1,0 +1,184 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <section class="post-box">
+    {% if user %}
+      <form action="/post" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>カテゴリ:
+          <select name="category" required>
+            <option value="food_photo">ご飯の写真</option>
+            <option value="shop_intro">お店の紹介</option>
+            <option value="recipe_intro">レシピ紹介</option>
+          </select>
+        </label>
+        <label class="shop-only">店舗サブカテゴリ（店舗紹介時のみ）:
+          <select name="shop_category">
+            <option value="">-- 選択 --</option>
+            <option>和食</option>
+            <option>洋食</option>
+            <option>中華</option>
+            <option>カフェ</option>
+            <option>居酒屋</option>
+            <option>ラーメン</option>
+            <option>スイーツ</option>
+          </select>
+        </label>
+        <fieldset class="shop-details shop-only">
+          <legend>店舗詳細（店舗紹介時のみ）</legend>
+          <label>店名: <input name="shop_name" maxlength="200"></label>
+          <label>住所: <input name="shop_address" maxlength="200"></label>
+          <label>URL: <input name="shop_url" maxlength="300" placeholder="https://..."></label>
+          <label>営業時間: <input name="shop_hours" maxlength="200" placeholder="例: 11:00-22:00"></label>
+          <label>電話番号: <input name="shop_phone" maxlength="200"></label>
+          <label>価格帯: <input name="shop_price_range" maxlength="200" placeholder="例: 1000-2000円"></label>
+          <input type="hidden" name="shop_lat" id="shop_lat">
+          <input type="hidden" name="shop_lng" id="shop_lng">
+        </fieldset>
+
+        <script>
+          (function() {
+            const catSel = document.querySelector('select[name="category"]');
+            const nameInput = document.querySelector('input[name="shop_name"]');
+            const addrInput = document.querySelector('input[name="shop_address"]');
+            const latInput = document.getElementById('shop_lat');
+            const lngInput = document.getElementById('shop_lng');
+            const shopOnlyElems = document.querySelectorAll('.shop-only');
+            function toggleShopOnly(){
+              const show = catSel && catSel.value === 'shop_intro';
+              shopOnlyElems.forEach(el => { el.style.display = show ? '' : 'none'; });
+            }
+            function updateGeo() {
+              if (catSel.value === 'shop_intro' && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                  const lat = pos.coords.latitude;
+                  const lng = pos.coords.longitude;
+                  if (latInput && lngInput) {
+                    latInput.value = lat;
+                    lngInput.value = lng;
+                  }
+                }, function(err){
+                  console.log('geolocation error', err);
+                }, {enableHighAccuracy: true, timeout: 5000});
+              }
+            }
+            async function geocodeByName() {
+              if (catSel.value !== 'shop_intro') return;
+              const name = nameInput && nameInput.value.trim();
+              const address = addrInput && addrInput.value.trim();
+              if (!name && !address) return;
+              try {
+                const params = new URLSearchParams();
+                if (name) params.append('name', name);
+                if (address) params.append('address', address);
+                const res = await fetch('/geocode?' + params.toString());
+                if (res.ok) {
+                  const j = await res.json();
+                  if (j.lat && j.lng) {
+                    latInput.value = j.lat;
+                    lngInput.value = j.lng;
+                  }
+                }
+              } catch (e) {
+                console.log('geocode error', e);
+              }
+            }
+            if (catSel) {
+              catSel.addEventListener('change', function(){ updateGeo(); toggleShopOnly(); });
+              // initial
+              updateGeo();
+              toggleShopOnly();
+            }
+            if (nameInput) {
+              nameInput.addEventListener('blur', geocodeByName);
+              nameInput.addEventListener('change', geocodeByName);
+            }
+            if (addrInput) {
+              addrInput.addEventListener('blur', geocodeByName);
+              addrInput.addEventListener('change', geocodeByName);
+            }
+          })();
+        </script>
+        <textarea name="content" rows="3" placeholder="いまどうしてる？"></textarea>
+        <div>
+          <input type="file" name="image" accept="image/*">
+        </div>
+        <div><button type="submit">投稿</button></div>
+      </form>
+    {% else %}
+      <p><a href="/login">ログイン</a>して投稿できます。</p>
+    {% endif %}
+  </section>
+
+  <section class="feed">
+    {% for p in posts %}
+      <article class="post">
+        <div class="post-header">
+          {% if p['avatar'] %}
+            <img class="avatar-img" src="{{ url_for('static', filename='uploads/avatars/' ~ p['avatar']) }}" alt="avatar">
+          {% else %}
+            <div class="avatar">{{ p['username'][:1]|upper }}</div>
+          {% endif %}
+          <div>
+            <div><a href="/user/{{ p['username'] }}">{{ p['username'] }}</a> <span class="badge">{% if p['category']=='food_photo' %}ご飯の写真{% elif p['category']=='shop_intro' %}お店の紹介{% elif p['category']=='recipe_intro' %}レシピ紹介{% else %}その他{% endif %}</span></div>
+            <div class="meta">{{ p['created_at'] }}</div>
+          </div>
+        </div>
+        <p class="content">{{ p['content'] }}</p>
+        {% if p['image'] %}
+          {% set thumb_path = 'uploads/thumbs/thumb_' + p['image'] %}
+          {% set full_path = 'uploads/' + p['image'] %}
+          <div class="post-image"><a href="{{ url_for('static', filename=full_path) }}" target="_blank"><img src="{{ url_for('static', filename=thumb_path) }}" alt="image" style="max-width:320px"></a></div>
+        {% endif %}
+        {% if p['category']=='shop_intro' and p['shop_category'] %}
+          <div class="subcat">カテゴリ: {{ p['shop_category'] }}</div>
+          <ul class="shop-detail-list">
+            {% if p['shop_name'] %}<li>店名: {{ p['shop_name'] }}</li>{% endif %}
+            {% if p['shop_address'] %}<li>住所: {{ p['shop_address'] }}</li>{% endif %}
+            {% if p['shop_url'] %}<li>URL: <a href="{{ p['shop_url'] }}" target="_blank" rel="noopener">{{ p['shop_url'] }}</a></li>{% endif %}
+            {% if p['shop_hours'] %}<li>営業時間: {{ p['shop_hours'] }}</li>{% endif %}
+            {% if p['shop_phone'] %}<li>電話番号: {{ p['shop_phone'] }}</li>{% endif %}
+            {% if p['shop_price_range'] %}<li>価格帯: {{ p['shop_price_range'] }}</li>{% endif %}
+            {% if p['shop_lat'] and p['shop_lng'] %}
+              <li>位置情報: <a href="https://www.google.com/maps?q={{ p['shop_lat'] }},{{ p['shop_lng'] }}" target="_blank" rel="noopener">Googleマップで開く</a></li>
+            {% endif %}
+          </ul>
+        {% endif %}
+        <div class="post-actions">
+          <form action="/like/{{ p['id'] }}" method="post" class="like-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">いいね ({{ p['likes'] }})</button>
+          </form>
+          {% if user %}
+          <form action="/bookmark/{{ p['id'] }}" method="post" class="bm-form" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if p['id'] in bookmarked_ids %}
+              <button type="submit">🔖 解除</button>
+            {% else %}
+              <button type="submit">🔖 追加</button>
+            {% endif %}
+          </form>
+          {% endif %}
+          {% if user and user.id == p['user_id'] %}
+            <a href="/edit/{{ p['id'] }}">編集</a>
+            <form action="/delete/{{ p['id'] }}" method="post" style="display:inline" onsubmit="return confirm('削除しますか？')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">削除</button>
+            </form>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <p>まだ投稿はありません。</p>
+    {% endfor %}
+  </section>
+
+  <nav class="pagination">
+    {% if page > 1 %}
+      <a href="?page={{ page-1 }}{% if q %}&q={{ q }}{% endif %}">前へ</a>
+    {% endif %}
+    <span>ページ {{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+      <a href="?page={{ page+1 }}{% if q %}&q={{ q }}{% endif %}">次へ</a>
+    {% endif %}
+  </nav>
+{% endblock %}

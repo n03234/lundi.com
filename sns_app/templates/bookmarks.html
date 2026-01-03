@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>ブックマーク</h2>
+  {% if premium %}
+    <form action="/bookmarks" method="get" class="bm-sort" style="margin-bottom:8px">
+      <label>並び替え:
+        <select name="sort">
+          <option value="position" {% if sort=='position' %}selected{% endif %}>手動（保存順）</option>
+          <option value="created_desc" {% if sort=='created_desc' %}selected{% endif %}>新しい順</option>
+          <option value="created_asc" {% if sort=='created_asc' %}selected{% endif %}>古い順</option>
+          <option value="likes_desc" {% if sort=='likes_desc' %}selected{% endif %}>いいねが多い順</option>
+          <option value="category" {% if sort=='category' %}selected{% endif %}>カテゴリ</option>
+        </select>
+      </label>
+      <button type="submit">適用</button>
+    </form>
+  {% else %}
+    <p>高度な並び替えや整理はプレミアム（月額300円）でご利用いただけます。<a href="/pricing">購読する</a></p>
+  {% endif %}
+
+  <section class="feed">
+    {% for p in bookmarks %}
+      <article class="post">
+        <div class="post-header">
+          {% if p['avatar'] %}
+            <img class="avatar-img" src="{{ url_for('static', filename='uploads/avatars/' ~ p['avatar']) }}" alt="avatar">
+          {% else %}
+            <div class="avatar">{{ p['username'][:1]|upper }}</div>
+          {% endif %}
+          <div>
+            <div><a href="/user/{{ p['username'] }}">{{ p['username'] }}</a> <span class="badge">{% if p['category']=='food_photo' %}ご飯の写真{% elif p['category']=='shop_intro' %}お店の紹介{% elif p['category']=='recipe_intro' %}レシピ紹介{% else %}その他{% endif %}</span></div>
+            <div class="meta">{{ p['created_at'] }}</div>
+          </div>
+        </div>
+        {% if premium %}
+          <div class="bm-tools" style="margin:8px 0; display:flex; align-items:center; gap:8px">
+            <a href="/bookmarks/move/{{ p['id'] }}?dir=up">⬆️ 上へ</a>
+            <a href="/bookmarks/move/{{ p['id'] }}?dir=down">⬇️ 下へ</a>
+            <form action="/bookmarks/folder/{{ p['id'] }}" method="post" style="display:inline-flex; align-items:center; gap:4px">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input name="folder" value="{{ p['folder'] or '' }}" placeholder="フォルダ名" maxlength="40">
+              <button type="submit">保存</button>
+            </form>
+          </div>
+        {% endif %}
+        <p class="content">{{ p['content'] }}</p>
+        {% if p['image'] %}
+          {% set thumb_path = 'uploads/thumbs/thumb_' + p['image'] %}
+          {% set full_path = 'uploads/' + p['image'] %}
+          <div class="post-image"><a href="{{ url_for('static', filename=full_path) }}" target="_blank"><img src="{{ url_for('static', filename=thumb_path) }}" alt="image" style="max-width:320px"></a></div>
+        {% endif %}
+        <div class="post-actions">
+          <form action="/bookmark/{{ p['id'] }}" method="post" class="bm-form" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">🔖 解除</button>
+          </form>
+        </div>
+      </article>
+    {% else %}
+      <p>まだブックマークはありません。</p>
+    {% endfor %}
+  </section>
+{% endblock %}

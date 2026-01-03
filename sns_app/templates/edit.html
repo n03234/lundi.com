@@ -1,0 +1,106 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>投稿を編集</h2>
+  <form action="/edit/{{ post['id'] }}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>カテゴリ:
+      <select name="category" required>
+        <option value="food_photo" {% if post['category']=='food_photo' %}selected{% endif %}>ご飯の写真</option>
+        <option value="shop_intro" {% if post['category']=='shop_intro' %}selected{% endif %}>お店の紹介</option>
+        <option value="recipe_intro" {% if post['category']=='recipe_intro' %}selected{% endif %}>レシピ紹介</option>
+      </select>
+    </label>
+    <label>店舗サブカテゴリ（店舗紹介時のみ）:
+      <select name="shop_category">
+        <option value="">-- 選択 --</option>
+        <option {% if post['shop_category']=='和食' %}selected{% endif %}>和食</option>
+        <option {% if post['shop_category']=='洋食' %}selected{% endif %}>洋食</option>
+        <option {% if post['shop_category']=='中華' %}selected{% endif %}>中華</option>
+        <option {% if post['shop_category']=='カフェ' %}selected{% endif %}>カフェ</option>
+        <option {% if post['shop_category']=='居酒屋' %}selected{% endif %}>居酒屋</option>
+        <option {% if post['shop_category']=='ラーメン' %}selected{% endif %}>ラーメン</option>
+        <option {% if post['shop_category']=='スイーツ' %}selected{% endif %}>スイーツ</option>
+      </select>
+    </label>
+    <fieldset class="shop-details">
+      <legend>店舗詳細（店舗紹介時のみ）</legend>
+      <label>店名: <input name="shop_name" value="{{ post['shop_name'] or '' }}" maxlength="200"></label>
+      <label>住所: <input name="shop_address" value="{{ post['shop_address'] or '' }}" maxlength="200"></label>
+      <label>URL: <input name="shop_url" value="{{ post['shop_url'] or '' }}" maxlength="300" placeholder="https://..."></label>
+      <label>営業時間: <input name="shop_hours" value="{{ post['shop_hours'] or '' }}" maxlength="200" placeholder="例: 11:00-22:00"></label>
+      <label>電話番号: <input name="shop_phone" value="{{ post['shop_phone'] or '' }}" maxlength="200"></label>
+      <label>価格帯: <input name="shop_price_range" value="{{ post['shop_price_range'] or '' }}" maxlength="200" placeholder="例: 1000-2000円"></label>
+      <input type="hidden" name="shop_lat" id="shop_lat" value="{{ post['shop_lat'] or '' }}">
+      <input type="hidden" name="shop_lng" id="shop_lng" value="{{ post['shop_lng'] or '' }}">
+    </fieldset>
+
+    <script>
+      (function() {
+        const catSel = document.querySelector('select[name="category"]');
+        const nameInput = document.querySelector('input[name="shop_name"]');
+        const addrInput = document.querySelector('input[name="shop_address"]');
+        function updateGeo() {
+          if (catSel.value === 'shop_intro' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const latInput = document.getElementById('shop_lat');
+              const lngInput = document.getElementById('shop_lng');
+              if (latInput && lngInput && !latInput.value && !lngInput.value) {
+                latInput.value = lat;
+                lngInput.value = lng;
+              }
+            }, function(err){
+              console.log('geolocation error', err);
+            }, {enableHighAccuracy: true, timeout: 5000});
+          }
+        }
+        async function geocodeByName() {
+          if (catSel.value !== 'shop_intro') return;
+          const name = nameInput && nameInput.value.trim();
+          const address = addrInput && addrInput.value.trim();
+          if (!name && !address) return;
+          try {
+            const params = new URLSearchParams();
+            if (name) params.append('name', name);
+            if (address) params.append('address', address);
+            const res = await fetch('/geocode?' + params.toString());
+            if (res.ok) {
+              const j = await res.json();
+              if (j.lat && j.lng) {
+                const latInput = document.getElementById('shop_lat');
+                const lngInput = document.getElementById('shop_lng');
+                latInput.value = j.lat;
+                lngInput.value = j.lng;
+              }
+            }
+          } catch (e) {
+            console.log('geocode error', e);
+          }
+        }
+        if (catSel) {
+          catSel.addEventListener('change', updateGeo);
+          // initial
+          updateGeo();
+        }
+        if (nameInput) {
+          nameInput.addEventListener('blur', geocodeByName);
+          nameInput.addEventListener('change', geocodeByName);
+        }
+        if (addrInput) {
+          addrInput.addEventListener('blur', geocodeByName);
+          addrInput.addEventListener('change', geocodeByName);
+        }
+      })();
+    </script>
+    <label>内容:</label>
+    <textarea name="content" rows="6">{{ post['content'] }}</textarea>
+    <div>
+      {% if post['image'] %}
+        <p>現在の画像: <a href="{{ url_for('static', filename='uploads/' + post['image']) }}" target="_blank">表示</a></p>
+      {% endif %}
+      <label>新しい画像 (任意): <input type="file" name="image" accept="image/*"></label>
+    </div>
+    <div><button type="submit">更新</button></div>
+  </form>
+{% endblock %}

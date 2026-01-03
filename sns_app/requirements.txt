@@ -1,0 +1,9 @@
+flask
+werkzeug
+Pillow
+requests
+waitress
+stripe
+python-dotenv
+email-validator
+Flask-WTF
