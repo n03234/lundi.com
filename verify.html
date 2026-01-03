@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>メール認証</h2>
+  <p>登録したメールアドレス宛に4桁の確認コードを送信しました。コードを入力して認証を完了してください。</p>
+  {% if not smtp_configured %}
+    <p style="color:#b55">開発モード: SMTP未設定のため、確認コードはサーバログに出力されています。ランチャー経由ではログが見えない場合があるので、ターミナルから直接起動して確認してください。</p>
+  {% endif %}
+  <form action="/verify" method="post" class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p>メールアドレス: <strong>{{ email }}</strong></p>
+    <input type="hidden" name="email" value="{{ email or '' }}">
+    <label>確認コード(4桁): <input name="code" maxlength="4" required></label>
+    <div><button type="submit">認証する</button></div>
+  </form>
+  {% if dev_code %}
+    <div class="dev-tip" style="margin-top:8px; padding:8px; border:1px dashed #888; color:#444;">
+      開発モード: 確認コードは <strong>{{ dev_code }}</strong> です。SMTP未設定のためログにも出力されています。
+    </div>
+  {% endif %}
+  <form action="/verify/resend" method="post" style="margin-top:8px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="email" value="{{ email or '' }}">
+    <button type="submit">コードを再送する</button>
+  </form>
+{% endblock %}
