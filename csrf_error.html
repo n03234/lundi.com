@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="card" style="max-width:520px;margin:16px auto;padding:16px;">
+    <h2 style="margin:0 0 8px;">送信が保護されました（CSRF）</h2>
+    <p style="margin:0 0 8px;">フォーム送信時の確認トークンが見つからなかったため、処理を中断しました。</p>
+    {% if description %}
+      <p style="color:#b00;">詳細: {{ description }}</p>
+    {% endif %}
+    <ul style="margin:8px 0 12px; padding-left:20px;">
+      <li>登録ページを一度「再読み込み」してから、再度送信してください。</li>
+      <li>サーバ再起動直後の場合、改めて登録ページを開き直してから送信してください。</li>
+      <li>URLは同一オリジン（例: http://127.0.0.1:5000）を利用し、ブラウザのクッキーを有効化してください。</li>
+    </ul>
+    <div>
+      <a href="{{ url_for('register') }}" class="btn">登録ページへ戻る</a>
+    </div>
+  </div>
+{% endblock %}
