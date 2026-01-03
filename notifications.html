@@ -1,0 +1,9 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>通知</h2>
+  {% if user %}
+    <p>現在、通知機能は準備中です。</p>
+  {% else %}
+    <p>通知を利用するには <a href="/login">ログイン</a> してください。</p>
+  {% endif %}
+{% endblock %}
