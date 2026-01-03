@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>{{ profile.username }} のプロフィール</h2>
+  {% if me and me.id == profile.id %}
+    <p>これはあなたのプロフィールです。</p>
+    <form action="{{ url_for('update_icon') }}" method="post" enctype="multipart/form-data" style="margin:8px 0;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>アイコン画像を変更: <input type="file" name="avatar" accept="image/*"></label>
+      <button type="submit">更新</button>
+    </form>
+  {% endif %}
+
+  <section class="feed">
+    {% for p in posts %}
+      <article class="post">
+        <div class="post-header">
+          {% if profile.avatar %}
+            <img class="avatar-img" src="{{ url_for('static', filename='uploads/avatars/' ~ profile.avatar) }}" alt="avatar">
+          {% else %}
+            <div class="avatar">{{ profile.username[:1]|upper }}</div>
+          {% endif %}
+          <div>
+            <div>{{ profile.username }} <span class="badge">{% if p['category']=='food_photo' %}ご飯の写真{% elif p['category']=='shop_intro' %}お店の紹介{% elif p['category']=='recipe_intro' %}レシピ紹介{% else %}その他{% endif %}</span></div>
+            <div class="meta">{{ p['created_at'] }}</div>
+          </div>
+        </div>
+        <p class="content">{{ p['content'] }}</p>
+        {% if p['image'] %}
+          {% set thumb_path = 'uploads/thumbs/thumb_' + p['image'] %}
+          {% set full_path = 'uploads/' + p['image'] %}
+          <div class="post-image"><a href="{{ url_for('static', filename=full_path) }}" target="_blank"><img src="{{ url_for('static', filename=thumb_path) }}" alt="image" style="max-width:320px"></a></div>
+        {% endif %}
+        {% if p['category']=='shop_intro' and p['shop_category'] %}
+          <div class="subcat">カテゴリ: {{ p['shop_category'] }}</div>
+          <ul class="shop-detail-list">
+            {% if p['shop_name'] %}<li>店名: {{ p['shop_name'] }}</li>{% endif %}
+            {% if p['shop_address'] %}<li>住所: {{ p['shop_address'] }}</li>{% endif %}
+            {% if p['shop_url'] %}<li>URL: <a href="{{ p['shop_url'] }}" target="_blank" rel="noopener">{{ p['shop_url'] }}</a></li>{% endif %}
+            {% if p['shop_hours'] %}<li>営業時間: {{ p['shop_hours'] }}</li>{% endif %}
+            {% if p['shop_phone'] %}<li>電話番号: {{ p['shop_phone'] }}</li>{% endif %}
+            {% if p['shop_price_range'] %}<li>価格帯: {{ p['shop_price_range'] }}</li>{% endif %}
+            {% if p['shop_lat'] and p['shop_lng'] %}
+              <li>位置情報: <a href="https://www.google.com/maps?q={{ p['shop_lat'] }},{{ p['shop_lng'] }}" target="_blank" rel="noopener">Googleマップで開く</a></li>
+            {% endif %}
+          </ul>
+        {% endif %}
+      </article>
+    {% else %}
+      <p>投稿が見つかりません。</p>
+    {% endfor %}
+  </section>
+
+  <nav class="pagination">
+    {% if page > 1 %}
+      <a href="?page={{ page-1 }}">前へ</a>
+    {% endif %}
+    <span>ページ {{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+      <a href="?page={{ page+1 }}">次へ</a>
+    {% endif %}
+  </nav>
+{% endblock %}
