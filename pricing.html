@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>プレミアム購読</h2>
+  <p>月額300円で、広告なし、機能拡張（ブックマークの整理・並び替えなど）、優先サポートの特典を利用できます。</p>
+  {% if user %}
+    {% if user.is_premium %}
+      <p><strong>現在プレミアムです。ありがとうございます！</strong></p>
+    {% else %}
+      {% if price_id %}
+        <form action="{{ url_for('create_checkout_session') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">💎 購読する</button>
+        </form>
+      {% else %}
+        <p>Stripeの価格IDが未設定です。管理者が設定すると購読できます。</p>
+      {% endif %}
+      {% if request.args.get('success') %}
+        <p>決済が完了しました。反映まで少し時間がかかる場合があります。</p>
+      {% elif request.args.get('canceled') %}
+        <p>決済がキャンセルされました。もう一度お試しください。</p>
+      {% endif %}
+    {% endif %}
+  {% else %}
+    <p>購読にはログインが必要です。<a href="{{ url_for('login') }}">ログイン</a></p>
+  {% endif %}
+{% endblock %}
