@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>新規登録</h2>
+  <form action="/register" method="post" class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>ユーザー名: <input name="username" value="{{ pref_username or '' }}" required></label>
+    <label>メールアドレス: <input name="email" type="email" value="{{ pref_email or '' }}" required></label>
+    <label>パスワード: <input name="password" type="password" required></label>
+    <div><button type="submit">登録</button></div>
+  </form>
+{% endblock %}
