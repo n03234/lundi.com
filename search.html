@@ -1,0 +1,96 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>キーワード検索</h2>
+  <form action="/search" method="get" class="search-form" style="margin-bottom:12px">
+    <label>キーワード: <input name="q" value="{{ q or '' }}" placeholder="例: ラーメン, カレー"></label>
+    <label>種別:
+      <select name="t">
+        <option value="all" {% if (t or 'all')=='all' %}selected{% endif %}>全投稿</option>
+        <option value="shop" {% if t=='shop' %}selected{% endif %}>店名/お店紹介</option>
+        <option value="recipe" {% if t=='recipe' %}selected{% endif %}>レシピ紹介</option>
+      </select>
+    </label>
+    <button type="submit">検索</button>
+  </form>
+  <h2>住所から店舗検索</h2>
+  <form action="/search" method="get" class="search-form">
+    <label>住所: <input name="address" value="{{ address or '' }}" placeholder="例: 東京都渋谷区"></label>
+    <label>半径(km): <input name="r" value="{{ radius_km or 2 }}" type="number" step="0.1" min="0.1" max="50"></label>
+    <button type="submit">検索</button>
+  </form>
+  <div style="margin:8px 0 16px">
+    <button type="button" id="nearMeBtn">現在地付近（店舗）</button>
+  </div>
+  <script>
+    (function(){
+      const btn = document.getElementById('nearMeBtn');
+      if (btn && navigator.geolocation) {
+        btn.addEventListener('click', function(){
+          navigator.geolocation.getCurrentPosition(function(pos){
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const r = 2; // km
+            location.href = `/near?lat=${lat}&lng=${lng}&r=${r}`;
+          }, function(err){ console.log('geo error', err); }, {enableHighAccuracy:true, timeout:5000});
+        });
+      }
+    })();
+  </script>
+  {% if lat and lng %}
+    <p>検索位置: ({{ lat }}, {{ lng }})</p>
+  {% endif %}
+  <section class="feed">
+    {% for p in posts %}
+      <article class="post">
+        <div class="post-header">
+          {% if p['avatar'] %}
+            <img class="avatar-img" src="{{ url_for('static', filename='uploads/avatars/' ~ p['avatar']) }}" alt="avatar">
+          {% else %}
+            <div class="avatar">{{ p['username'][:1]|upper }}</div>
+          {% endif %}
+          <div>
+            <div><a href="/user/{{ p['username'] }}">{{ p['username'] }}</a>
+              <span class="badge">{% if p['category']=='food_photo' %}ご飯の写真{% elif p['category']=='shop_intro' %}お店の紹介{% elif p['category']=='recipe_intro' %}レシピ紹介{% else %}その他{% endif %}</span>
+              {% if p['distance_km'] is defined %}<span class="badge">約 {{ p['distance_km'] }} km</span>{% endif %}
+            </div>
+            <div class="meta">{{ p['created_at'] }}</div>
+          </div>
+        </div>
+        <p class="content">{{ p['content'] }}</p>
+        {% if p['image'] %}
+          {% set thumb_path = 'uploads/thumbs/thumb_' + p['image'] %}
+          {% set full_path = 'uploads/' + p['image'] %}
+          <div class="post-image"><a href="{{ url_for('static', filename=full_path) }}" target="_blank"><img src="{{ url_for('static', filename=thumb_path) }}" alt="image" style="max-width:320px"></a></div>
+        {% endif %}
+        {% if p['category']=='shop_intro' and p['shop_category'] %}
+          <div class="subcat">カテゴリ: {{ p['shop_category'] }}</div>
+          <ul class="shop-detail-list">
+            {% if p['shop_name'] %}<li>店名: {{ p['shop_name'] }}</li>{% endif %}
+            {% if p['shop_address'] %}<li>住所: {{ p['shop_address'] }}</li>{% endif %}
+            {% if p['shop_url'] %}<li>URL: <a href="{{ p['shop_url'] }}" target="_blank" rel="noopener">{{ p['shop_url'] }}</a></li>{% endif %}
+            {% if p['shop_hours'] %}<li>営業時間: {{ p['shop_hours'] }}</li>{% endif %}
+            {% if p['shop_phone'] %}<li>電話番号: {{ p['shop_phone'] }}</li>{% endif %}
+            {% if p['shop_price_range'] %}<li>価格帯: {{ p['shop_price_range'] }}</li>{% endif %}
+            {% if p['shop_lat'] and p['shop_lng'] %}
+              <li>位置情報: <a href="https://www.google.com/maps?q={{ p['shop_lat'] }},{{ p['shop_lng'] }}" target="_blank" rel="noopener">Googleマップで開く</a></li>
+            {% endif %}
+          </ul>
+        {% endif %}
+        <div class="post-actions">
+          {% if user %}
+          <form action="/bookmark/{{ p['id'] }}" method="post" class="bm-form" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if bookmarked_ids and (p['id'] in bookmarked_ids) %}
+              <button type="submit">🔖 解除</button>
+            {% else %}
+              <button type="submit">🔖 追加</button>
+            {% endif %}
+          </form>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <p>該当する投稿は見つかりませんでした。</p>
+    {% endfor %}
+  </section>
+{% endblock %}
