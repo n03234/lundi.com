@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>lunch＆dinner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        {% if user %}
+          {% if user.avatar %}
+            <img class="avatar-img" src="{{ url_for('static', filename='uploads/avatars/' ~ user.avatar) }}" alt="avatar">
+          {% else %}
+            <span class="avatar">{{ user.username[:1]|upper }}</span>
+          {% endif %}
+        {% endif %}
+        <h1><a href="/">lunch＆dinner</a></h1>
+      </div>
+      <nav>
+        {% if user %}
+          <span>ようこそ、<a href="/user/{{ user.username }}">{{ user.username }}</a>さん</span>
+          <a href="/logout">ログアウト</a>
+          <a href="http://lundi.com" target="_blank" rel="noopener" style="margin-left:8px">lundi.com</a>
+          <a href="/pricing" style="margin-left:8px">💎 購読</a>
+          <button id="themeToggle" class="theme-toggle" type="button" title="テーマ切り替え">ライト</button>
+        {% else %}
+          <a href="/login">ログイン</a>
+          <a href="/register">登録</a>
+          <a href="http://lundi.com" target="_blank" rel="noopener" style="margin-left:8px">lundi.com</a>
+          <a href="/pricing" style="margin-left:8px">💎 購読</a>
+          <button id="themeToggle" class="theme-toggle" type="button" title="テーマ切り替え">ライト</button>
+        {% endif %}
+      </nav>
+    </header>
+    <main>
+      <div class="app-shell">
+        <aside class="sidebar">
+          <ul class="nav-list">
+            <li><a class="{% if request.endpoint=='index' %}active{% endif %}" href="/">🏠 TL</a></li>
+            <li><a class="{% if request.endpoint=='search' %}active{% endif %}" href="/search">🔍 検索</a></li>
+            <li><a class="{% if request.endpoint=='notifications' %}active{% endif %}" href="/notifications">🔔 通知</a></li>
+            <li><a class="{% if request.endpoint=='bookmarks' %}active{% endif %}" href="/bookmarks">🔖 ブックマーク</a></li>
+          </ul>
+        </aside>
+        <section class="content">
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              <ul class="flashes">
+                {% for m in messages %}
+                  <li>{{ m }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          {% endwith %}
+          {% block content %}{% endblock %}
+        </section>
+      </div>
+      <nav class="bottom-nav">
+        <a class="{% if request.endpoint=='index' %}active{% endif %}" href="/">🏠 TL</a>
+        <a class="{% if request.endpoint=='search' %}active{% endif %}" href="/search">🔍 検索</a>
+        <a class="{% if request.endpoint=='notifications' %}active{% endif %}" href="/notifications">🔔 通知</a>
+        <a class="{% if request.endpoint=='bookmarks' %}active{% endif %}" href="/bookmarks">🔖 ブックマーク</a>
+      </nav>
+    </main>
+    <footer>
+      <small>lunch＆dinner — <a href="http://lundi.com" target="_blank" rel="noopener">lundi.com</a></small>
+    </footer>
+    <script>
+    (function(){
+      const key='theme';
+      const saved=localStorage.getItem(key);
+      if(saved){ document.documentElement.setAttribute('data-theme', saved); }
+      function updateIcon(){
+        const btn=document.getElementById('themeToggle');
+        const t=document.documentElement.getAttribute('data-theme')||'light';
+        if(btn){ btn.textContent = t==='dark' ? 'ダーク' : 'ライト'; }
+      }
+      document.addEventListener('DOMContentLoaded', function(){
+        updateIcon();
+        const btn=document.getElementById('themeToggle');
+        if(btn){ btn.addEventListener('click', function(){
+          const cur=document.documentElement.getAttribute('data-theme')||'light';
+          const next=cur==='dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem(key, next);
+          updateIcon();
+        }); }
+      });
+    })();
+    </script>
+  </body>
+</html>
