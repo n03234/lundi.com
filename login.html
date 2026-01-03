@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h2>ログイン</h2>
+  <form action="/login" method="post" class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>ユーザー名: <input name="username" required></label>
+    <label>パスワード: <input name="password" type="password" required></label>
+    <div><button type="submit">ログイン</button></div>
+  </form>
+{% endblock %}
